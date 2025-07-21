@@ -301,6 +301,35 @@ def sanitize_title(raw_title):
 ', '', raw_title)
     clean = clean.strip().title()
     return clean
+def extract_metadata(file_name):
+    metadata = {
+        "ott": "Unknown",
+        "language": "Unknown",
+        "quality": "Unknown"
+    }
+
+    # Detect OTT platform
+    ott_list = ["Netflix", "Amazon Prime", "Hotstar", "Zee5", "SonyLiv"]
+    for tag in ott_list:
+        if tag.lower().replace(" ", "") in file_name.lower().replace(" ", ""):
+            metadata["ott"] = tag
+            break
+
+    # Detect language
+    languages = ["Hindi", "Tamil", "Telugu", "English"]
+    for lang in languages:
+        if lang.lower() in file_name.lower():
+            metadata["language"] = lang
+            break
+
+    # Detect quality
+    if "1080p" in file_name: metadata["quality"] = "1080p"
+    elif "720p" in file_name: metadata["quality"] = "720p"
+    elif "480p" in file_name: metadata["quality"] = "480p"
+
+    return metadata
+
+    
 
 def clean_filename(file_name):
     prefixes = ('[', '@', 'www.')
