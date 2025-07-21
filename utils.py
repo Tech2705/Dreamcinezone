@@ -291,7 +291,17 @@ async def save_group_settings(group_id, key, value):
     current.update({key: value})
     temp.SETTINGS.update({group_id: current})
     await db.update_settings(group_id, current)
-    
+
+def sanitize_title(raw_title):
+    import re
+    clean = re.sub(r'
+
+\[.*?\]
+
+', '', raw_title)
+    clean = clean.strip().title()
+    return clean
+
 def clean_filename(file_name):
     prefixes = ('[', '@', 'www.')
     unwanted = {word.lower() for word in BAD_WORDS}
