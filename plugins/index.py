@@ -198,6 +198,7 @@ media.file_type = message.media.value
 raw_name = message.caption or media.file_name
 media.caption = sanitize_title(raw_name)
 cleaned_title = media.caption
+meta = extract_metadata(raw_name)  # Uses tags like [Netflix], [720p], etc.
 save_tasks.append(save_file(media))
 # Build simulated poster & IMDB link
 poster_url = f"https://via.placeholder.com/300x450.png?text={cleaned_title.replace(' ', '+')}"
@@ -210,10 +211,10 @@ caption = MOVIE_UPDATE_NOTIFY_TXT.format(
     imdb_url=imdb_url,
     tag="Movie",
     filename=cleaned_title,
-    genres="Action",         # hardcoded now
-    ott="Netflix",           # we’ll auto-detect later
-    quality="1080p",
-    language="Hindi",
+    genres=meta["genres"],         # hardcoded now
+    ott=meta["ott"],           # we’ll auto-detect later
+    quality=meta["quality"],
+    language=meta["language"],
     rating="8.2",
     search_link=f"https://t.me/DreamcinezoneBot?start={cleaned_title.replace(' ', '_')}"
 )
