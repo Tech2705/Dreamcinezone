@@ -189,13 +189,17 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                         elif message.media not in [enums.MessageMediaType.VIDEO, enums.MessageMediaType.AUDIO, enums.MessageMediaType.DOCUMENT]:
                             unsupported += 1
                             continue
-                        media = getattr(message, message.media.value, None)
-                        if not media:
-                            unsupported += 1
-                            continue
-                        media.file_type = message.media.value
-                        media.caption = message.caption
-                        save_tasks.append(save_file(media))
+                        from utils import sanitize_title
+
+media = getattr(message, message.media.value, None)
+media.file_type = message.media.value
+
+# Clean the caption for smarter indexing and IMDB lookup
+raw_name = message.caption or media.file_name
+media.caption = sanitize_title(raw_name)
+
+save_tasks.append(save_file(media))
+
 
                     except Exception:
                         errors += 1
