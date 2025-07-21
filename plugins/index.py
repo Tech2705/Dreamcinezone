@@ -197,8 +197,31 @@ media.file_type = message.media.value
 # Clean the caption for smarter indexing and IMDB lookup
 raw_name = message.caption or media.file_name
 media.caption = sanitize_title(raw_name)
-
+cleaned_title = media.caption
 save_tasks.append(save_file(media))
+# Build simulated poster & IMDB link
+poster_url = f"https://via.placeholder.com/300x450.png?text={cleaned_title.replace(' ', '+')}"
+imdb_url = f"https://www.imdb.com/find?q={cleaned_title.replace(' ', '+')}"
+from Script import MOVIE_UPDATE_NOTIFY_TXT
+from info import MOVIE_UPDATE_NOTIFICATION, MOVIE_UPDATE_CHANNEL
+
+caption = MOVIE_UPDATE_NOTIFY_TXT.format(
+    poster_url=poster_url,
+    imdb_url=imdb_url,
+    tag="Movie",
+    filename=cleaned_title,
+    genres="Action",         # hardcoded now
+    ott="Netflix",           # we’ll auto-detect later
+    quality="1080p",
+    language="Hindi",
+    rating="8.2",
+    search_link=f"https://t.me/DreamcinezoneBot?start={cleaned_title.replace(' ', '_')}"
+)
+
+if MOVIE_UPDATE_NOTIFICATION:
+    await bot.send_message(MOVIE_UPDATE_CHANNEL, caption)
+
+
 
 
                     except Exception:
