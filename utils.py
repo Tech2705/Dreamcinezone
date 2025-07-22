@@ -296,39 +296,32 @@ import re
 from typing import Optional
 
 def sanitize_title(raw_title: str) -> Optional[str]:
-    # Replace separators with space
-    title = raw_title.replace("_", " ").replace(".", " ").replace("-", " ")
+    # Step 1: Remove bracketed text like [TIF]
+    title = re.sub(r"\[.*?\]", "", raw_title)
 
-    # Remove tags like [TIF], [Mashobuc], etc.
-    title = re.sub(r"\[.*?\]", "", title)
+    # Step 2: Remove @handles and Telegram channel names
+    title = re.sub(r"@\S+", "", title)
 
-    # Remove channel or group names like @SPY_TALKIESS
-    title = re.sub(r"@\S+", "", title, flags=re.IGNORECASE)
+    # Step 3: Remove dashes/hyphens and dots as separators
+    title = title.replace("-", " ").replace("_", " ").replace(".", " ")
 
-    # Remove known junk words (expand this as needed)
-    junk_words = [
-        "hdrip", "webdl", "web", "rip", "x264", "x265", "hevc", "h264", "multi", "audio",
-        "dual", "aud", "hq", "ultra", "hd", "1080p", "720p", "2160p", "4k", "dvdscr", "bluray",
-        "season", "s0\d+", "ep\d+", "episode", "e\d+", "s\d+", "part", "repack", "tamil", "telugu",
-        "hindi", "malayalam", "kannda", "eng", "english", "sub", "subs", "dub", "dubbed", "uncut"
-    ]
-    pattern = r'\b(?:' + '|'.join(junk_words) + r')\b'
-    title = re.sub(pattern, '', title, flags=re.IGNORECASE)
+    # Step 4: Normalize extra spaces
+    title = re.sub(r'\s+', ' ', title).strip()
 
-    # Find year (between 1900 and 2099)
-    match = re.search(r"(19|20)\d{2}", title)
-    year = match.group(0) if match else None
+    # Step 5: Match year (e.g., 2024, 2025)
+    year_match = re.search(r"\b(19|20)\d{2}\b", title)
+    if not year_match:
+        return None  # No year found, skip
 
-    if not year:
-        return None  # If no year, skip to avoid bad IMDb results
+    year = year_match.group()
+    
+    # Step 6: Keep only the part of title before and including the year
+    title_before_year = title.split(year)[0]
+    clean_title = f"{title_before_year} {year}".strip()
 
-    # Remove everything after the year
-    title = title.split(year)[0] + year
+    # Step 7: Final clean and capitalize
+    return re.sub(r'\s+', ' ', clean_title).title()
 
-    # Clean and format
-    title = re.sub(r'\s+', ' ', title).strip().title()
-
-    return title
 
 
 
