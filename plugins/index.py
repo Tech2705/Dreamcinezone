@@ -189,45 +189,45 @@ async def index_files_to_db(lst_msg_id, chat, msg, bot):
                         elif message.media not in [enums.MessageMediaType.VIDEO, enums.MessageMediaType.AUDIO, enums.MessageMediaType.DOCUMENT]:
                             unsupported += 1
                             continue
+
                         from utils import sanitize_title
+                        from Script import MOVIE_UPDATE_NOTIFY_TXT
+                        from info import MOVIE_UPDATE_NOTIFICATION, MOVIE_UPDATE_CHANNEL
+                        from utils import extract_metadata
 
-media = getattr(message, message.media.value, None)
-media.file_type = message.media.value
+                        media = getattr(message, message.media.value, None)
+                        media.file_type = message.media.value
 
-# Clean the caption for smarter indexing and IMDB lookup
-raw_name = message.caption or media.file_name
-media.caption = sanitize_title(raw_name)
-cleaned_title = media.caption
-meta = extract_metadata(raw_name)  # Uses tags like [Netflix], [720p], etc.
-save_tasks.append(save_file(media))
-# Build simulated poster & IMDB link
-poster_url = f"https://via.placeholder.com/300x450.png?text={cleaned_title.replace(' ', '+')}"
-imdb_url = f"https://www.imdb.com/find?q={cleaned_title.replace(' ', '+')}"
-from Script import MOVIE_UPDATE_NOTIFY_TXT
-from info import MOVIE_UPDATE_NOTIFICATION, MOVIE_UPDATE_CHANNEL
+                        raw_name = message.caption or media.file_name
+                        media.caption = sanitize_title(raw_name)
+                        cleaned_title = media.caption
+                        meta = extract_metadata(raw_name)
 
-caption = MOVIE_UPDATE_NOTIFY_TXT.format(
-    poster_url=poster_url,
-    imdb_url=imdb_url,
-    tag="Movie",
-    filename=cleaned_title,
-    genres=meta["genres"],         # hardcoded now
-    ott=meta["ott"],           # we’ll auto-detect later
-    quality=meta["quality"],
-    language=meta["language"],
-    rating="8.2",
-    search_link=f"https://t.me/DreamcinezoneBot?start={cleaned_title.replace(' ', '_')}"
-)
+                        save_tasks.append(save_file(media))
 
-if MOVIE_UPDATE_NOTIFICATION:
-    await bot.send_message(MOVIE_UPDATE_CHANNEL, caption)
+                        poster_url = f"https://via.placeholder.com/300x450.png?text={cleaned_title.replace(' ', '+')}"
+                        imdb_url = f"https://www.imdb.com/find?q={cleaned_title.replace(' ', '+')}"
 
+                        caption = MOVIE_UPDATE_NOTIFY_TXT.format(
+                            poster_url=poster_url,
+                            imdb_url=imdb_url,
+                            tag="Movie",
+                            filename=cleaned_title,
+                            genres=meta["genres"],
+                            ott=meta["ott"],
+                            quality=meta["quality"],
+                            language=meta["language"],
+                            rating="8.2",
+                            search_link=f"https://t.me/DreamcinezoneBot?start={cleaned_title.replace(' ', '_')}"
+                        )
 
-
+                        if MOVIE_UPDATE_NOTIFICATION:
+                            await bot.send_message(MOVIE_UPDATE_CHANNEL, caption)
 
                     except Exception:
                         errors += 1
                         continue
+
                 results = await asyncio.gather(*save_tasks, return_exceptions=True)
                 for result in results:
                     if isinstance(result, Exception):
@@ -282,4 +282,3 @@ if MOVIE_UPDATE_NOTIFICATION:
                 f"❌ Error: <code>{e}</code>",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('Close', callback_data='close_data')]])
             )
-
