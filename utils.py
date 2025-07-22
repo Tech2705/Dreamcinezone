@@ -294,7 +294,7 @@ async def save_group_settings(group_id, key, value):
 
 def sanitize_title(raw_title):
     import re
-   clean = re.sub(r'
+    clean = re.sub(r'
 
 \[.*?\]
 
