@@ -22,6 +22,8 @@ from dreamxbotz.Bot import dreamxbotz
 from dreamxbotz.util.keepalive import ping_server
 from dreamxbotz.Bot.clients import initialize_clients
 from plugins import check_expired_premium
+from globals import botStartTime
+
 
 # Logging Setup
 logging.config.fileConfig('logging.conf')
