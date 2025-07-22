@@ -294,39 +294,47 @@ async def save_group_settings(group_id, key, value):
 
 import re
 
-import re
-
 def sanitize_title(raw_title: str) -> str:
     """
-    Cleans up file titles by removing junk like tags, encodes, usernames, etc.
+    Cleans the title string by removing junk, tags, encodes, usernames, and unwanted patterns.
     """
     title = raw_title.strip()
 
-    # Remove Telegram usernames like @something
+    # Lowercase copy for matching
+    lowered = title.lower()
+
+    # Step 1: Remove telegram usernames like @rottenfiles
     title = re.sub(r"@\w+", "", title)
 
-    # Remove leading junk like [TIF], (2023), etc.
+    # Step 2: Remove leading bracketed content [TIF], (2023), etc.
     title = re.sub(r"^[\[\(\{].*?[\]\)\}]", "", title)
 
-    # Replace separators with space
+    # Step 3: Replace separators with spaces
     title = re.sub(r"[\._\-]", " ", title)
 
-    # Remove tags like 720p, x264, HDRip, etc.
-    tags = [
-        r'\b\d{3,4}p\b', r'\bHDRip\b', r'\bBluRay\b', r'\bWEBRip\b', r'\bWEB[- ]DL\b',
-        r'\bDVDRip\b', r'\bHEVC\b', r'\bx264\b', r'\bx265\b', r'\bESub[s]?\b',
-        r'\bDual\s?Audio\b', r'\bAAC\b', r'\bDDP?\b', r'\b10bit\b', r'\bHC\b', r'\bCAM\b'
+    # Step 4: Remove common encoding/release tags
+    patterns = [
+        r'\b\d{3,4}p\b', r'\bHDRip\b', r'\bBluRay\b', r'\bWEB[- ]?DL\b',
+        r'\bWEBRip\b', r'\bDVDRip\b', r'\bHEVC\b', r'\bx264\b', r'\bx265\b',
+        r'\bESub[s]?\b', r'\bDual\s?Audio\b', r'\bAAC\b', r'\bDDP?\b',
+        r'\b10bit\b', r'\bHC\b', r'\bCAM\b', r'\bHDCAM\b'
     ]
-    for tag in tags:
-        title = re.sub(tag, "", title, flags=re.IGNORECASE)
+    for pattern in patterns:
+        title = re.sub(pattern, '', title, flags=re.IGNORECASE)
 
-    # Remove leftover bracketed junk
+    # Step 5: Remove blacklisted noise words
+    blacklist = ['tif', 'mashobuc', 'rottenfiles', 'cinevood', 'skymovies', 'extramovies']
+    title_words = title.split()
+    title = ' '.join(word for word in title_words if word.lower() not in blacklist)
+
+    # Step 6: Remove any leftover bracketed junk
     title = re.sub(r"[\[\(\{].*?[\]\)\}]", "", title)
 
-    # Remove extra whitespace
-    title = re.sub(r'\s+', ' ', title)
+    # Final cleanup: collapse spaces and capitalize
+    title = re.sub(r"\s+", " ", title).strip().title()
 
-    return title.strip().title()
+    return title
+
 
 
 
