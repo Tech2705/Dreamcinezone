@@ -48,3 +48,5 @@ gTTS==2.3.1
 
 # Git-based Packages
 git+https://github.com/Joelkb/cinemagoer
+fastapi
+uvicorn
