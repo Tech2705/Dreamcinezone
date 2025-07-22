@@ -11,7 +11,7 @@ import asyncio
 import psutil
 import logging
 from time import time
-from bot import botStartTime
+from globals import botStartTime
 
 """-----------------------------------------https://t.me/dreamxbotz--------------------------------------"""
 
