@@ -71,6 +71,12 @@ async def dreamxbotz_start():
 
     await load_plugins()
 
+    dreamxbotz.loop.create_task(check_expired_premium(dreamxbotz))
+    dreamxbotz.loop.create_task(start_fastapi())  # ✅ Starts FastAPI for Koyeb health checks
+
+    await idle()  # ✅ Keeps the bot running
+
+
     # Fetch banned users and chats
     b_users, b_chats = await db.get_banned()
     temp.BANNED_USERS = b_users
