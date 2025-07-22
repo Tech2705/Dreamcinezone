@@ -293,35 +293,43 @@ async def save_group_settings(group_id, key, value):
     await db.update_settings(group_id, current)
 
 import re
+from typing import Optional
 
-def sanitize_title(raw_title: str) -> str:
-    # Remove telegram handles like @ChannelName
-    title = re.sub(r'@\S+', '', raw_title)
+def sanitize_title(raw_title: str) -> Optional[str]:
+    # Replace separators with space
+    title = raw_title.replace("_", " ").replace(".", " ").replace("-", " ")
 
-    # Remove square bracket tags like [TIF], [HQ], [Tamil], etc.
-    title = re.sub(r'\[.*?\]', '', title)
+    # Remove tags like [TIF], [Mashobuc], etc.
+    title = re.sub(r"\[.*?\]", "", title)
 
-    # Remove leading hyphens, repeated dashes or special characters
-    title = re.sub(r'[-–—]+', ' ', title)
+    # Remove channel or group names like @SPY_TALKIESS
+    title = re.sub(r"@\S+", "", title, flags=re.IGNORECASE)
 
-    # Remove extra file info like 1080p, HDRip, x264, etc.
-    title = re.sub(r'\b(720p|1080p|2160p|x264|x265|HDRip|BluRay|WEBRip|BRRip|DualAud|MultiAud|UNCUT|HEVC|HQ)\b', '', title, flags=re.I)
+    # Remove known junk words (expand this as needed)
+    junk_words = [
+        "hdrip", "webdl", "web", "rip", "x264", "x265", "hevc", "h264", "multi", "audio",
+        "dual", "aud", "hq", "ultra", "hd", "1080p", "720p", "2160p", "4k", "dvdscr", "bluray",
+        "season", "s0\d+", "ep\d+", "episode", "e\d+", "s\d+", "part", "repack", "tamil", "telugu",
+        "hindi", "malayalam", "kannda", "eng", "english", "sub", "subs", "dub", "dubbed", "uncut"
+    ]
+    pattern = r'\b(?:' + '|'.join(junk_words) + r')\b'
+    title = re.sub(pattern, '', title, flags=re.IGNORECASE)
 
-    # Replace dots, underscores with spaces
-    title = re.sub(r'[._]', ' ', title)
+    # Find year (between 1900 and 2099)
+    match = re.search(r"(19|20)\d{2}", title)
+    year = match.group(0) if match else None
 
-    # Keep only first part of filename up to the year (4-digit number)
-    match = re.search(r'([a-zA-Z\s]+)[\s\(\[]*(\d{4})[\)\]]*', title)
-    if match:
-        name = match.group(1).strip()
-        year = match.group(2)
-        clean_title = f"{name} {year}"
-    else:
-        # fallback: clean and guess title
-        clean_title = re.sub(r'\s+', ' ', title).strip()
+    if not year:
+        return None  # If no year, skip to avoid bad IMDb results
 
-    # Proper capitalization
-    return clean_title.title()
+    # Remove everything after the year
+    title = title.split(year)[0] + year
+
+    # Clean and format
+    title = re.sub(r'\s+', ' ', title).strip().title()
+
+    return title
+
 
 
 
