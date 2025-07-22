@@ -50,3 +50,4 @@ gTTS==2.3.1
 git+https://github.com/Joelkb/cinemagoer
 fastapi
 uvicorn
+python-dotenv
