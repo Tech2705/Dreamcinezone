@@ -295,23 +295,34 @@ async def save_group_settings(group_id, key, value):
 import re
 
 def sanitize_title(raw_title: str) -> str:
-    # Remove known junk tags and Telegram handles
-    raw_title = re.sub(r'@\S+', '', raw_title)                  # remove @handles
-    raw_title = re.sub(r'\[.*?\]', '', raw_title)              # remove [tags]
-    raw_title = re.sub(r'[-_.]', ' ', raw_title)               # replace separators with space
-    raw_title = re.sub(r'\s{2,}', ' ', raw_title)              # collapse multiple spaces
+    # Remove telegram handles like @ChannelName
+    title = re.sub(r'@\S+', '', raw_title)
 
-    # Extract title + year pattern
-    match = re.search(r'(?P<title>.+?)\s*(\(?((19|20)\d{2})\)?)', raw_title)
+    # Remove square bracket tags like [TIF], [HQ], [Tamil], etc.
+    title = re.sub(r'\[.*?\]', '', title)
+
+    # Remove leading hyphens, repeated dashes or special characters
+    title = re.sub(r'[-–—]+', ' ', title)
+
+    # Remove extra file info like 1080p, HDRip, x264, etc.
+    title = re.sub(r'\b(720p|1080p|2160p|x264|x265|HDRip|BluRay|WEBRip|BRRip|DualAud|MultiAud|UNCUT|HEVC|HQ)\b', '', title, flags=re.I)
+
+    # Replace dots, underscores with spaces
+    title = re.sub(r'[._]', ' ', title)
+
+    # Keep only first part of filename up to the year (4-digit number)
+    match = re.search(r'([a-zA-Z\s]+)[\s\(\[]*(\d{4})[\)\]]*', title)
     if match:
-        title = match.group('title').strip()
-        year = re.search(r'(19|20)\d{2}', raw_title).group()
-        # Remove common encoding terms after title
-        title = re.sub(r'\b(480p|720p|1080p|x264|x265|HDRip|BluRay|WEBRip|DualAudio|Hindi|Tamil|Telugu|Malayalam|English)\b', '', title, flags=re.I)
-        title = re.sub(r'\s{2,}', ' ', title).strip()
-        return f"{title.title()} {year}"
+        name = match.group(1).strip()
+        year = match.group(2)
+        clean_title = f"{name} {year}"
     else:
-        return raw_title.strip().title()
+        # fallback: clean and guess title
+        clean_title = re.sub(r'\s+', ' ', title).strip()
+
+    # Proper capitalization
+    return clean_title.title()
+
 
 
 
