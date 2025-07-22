@@ -1,95 +1,116 @@
-
 import sys
 import glob
 import importlib
 from pathlib import Path
 from pyrogram import Client, idle, __version__
 from pyrogram.raw.all import layer
-import time
 import asyncio
 from datetime import date, datetime
 import pytz
-from aiohttp import web
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+import uvicorn
+import logging
+import logging.config
+
 from database.ia_filterdb import Media, Media2
 from database.users_chats_db import db
 from info import *
 from utils import temp
 from Script import script
-from plugins import web_server, check_expired_premium, keep_alive
 from dreamxbotz.Bot import dreamxbotz
 from dreamxbotz.util.keepalive import ping_server
 from dreamxbotz.Bot.clients import initialize_clients
+from plugins import check_expired_premium
 
-import logging
-import logging.config
-
+# Logging Setup
 logging.config.fileConfig('logging.conf')
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
-logging.getLogger("imdbpy").setLevel(logging.ERROR)
-logging.getLogger("aiohttp").setLevel(logging.ERROR)
-logging.getLogger("aiohttp.web").setLevel(logging.ERROR)
-logging.getLogger("pymongo").setLevel(logging.WARNING)
 
+# FastAPI Web App
+web_app = FastAPI()
 
-botStartTime = time.time()
-ppath = "plugins/*.py"
-files = glob.glob(ppath)
+@web_app.get("/")
+async def health_check():
+    return JSONResponse({"status": "ok"})
+
+async def start_fastapi():
+    config = uvicorn.Config(web_app, host="0.0.0.0", port=8080, log_level="warning")
+    server = uvicorn.Server(config)
+    await server.serve()
+
+async def load_plugins():
+    plugin_files = glob.glob("plugins/*.py")
+    for name in plugin_files:
+        with open(name) as _:
+            plugin_name = Path(name).stem
+            import_path = f"plugins.{plugin_name}"
+            spec = importlib.util.spec_from_file_location(import_path, f"plugins/{plugin_name}.py")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            sys.modules[import_path] = module
+            print(f"✅ Loaded Plugin: {plugin_name}")
+
+async def throttled_check_expired():
+    while True:
+        await check_expired_premium(dreamxbotz)
+        await asyncio.sleep(60)  # sleep to reduce CPU
+
+async def throttled_keep_alive():
+    while True:
+        await ping_server()
+        await asyncio.sleep(30)
 
 async def dreamxbotz_start():
-    print('\n')
-    print('\nInitalizing DreamxBotz')
+    print("\n🚀 Initializing DreamxBotz...")
     await dreamxbotz.start()
-    bot_info = await dreamxbotz.get_me()
-    dreamxbotz.username = bot_info.username
     await initialize_clients()
-    for name in files:
-        with open(name) as a:
-            patt = Path(a.name)
-            plugin_name = patt.stem.replace(".py", "")
-            plugins_dir = Path(f"plugins/{plugin_name}.py")
-            import_path = "plugins.{}".format(plugin_name)
-            spec = importlib.util.spec_from_file_location(import_path, plugins_dir)
-            load = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(load)
-            sys.modules["plugins." + plugin_name] = load
-            print("DreamxBotz Imported => " + plugin_name)
-    if ON_HEROKU:
-        asyncio.create_task(ping_server()) 
+
+    await load_plugins()
+
+    # Fetch banned users and chats
     b_users, b_chats = await db.get_banned()
     temp.BANNED_USERS = b_users
     temp.BANNED_CHATS = b_chats
+
+    # Set up DB indexes
     await Media.ensure_indexes()
     if MULTIPLE_DB:
         await Media2.ensure_indexes()
-        print("Multiple Database Mode On. Now Files Will Be Save In Second DB If First DB Is Full")
+        print("🗃 Multiple DB Mode Active")
     else:
-        print("Single DB Mode On ! Files Will Be Save In First Database")
+        print("🗃 Single DB Mode Active")
+
+    # Set identity globals
     me = await dreamxbotz.get_me()
     temp.ME = me.id
     temp.U_NAME = me.username
     temp.B_NAME = me.first_name
     temp.B_LINK = me.mention
-    dreamxbotz.username = '@' + me.username
-    dreamxbotz.loop.create_task(check_expired_premium(dreamxbotz))
+    dreamxbotz.username = f'@{me.username}'
+
+    # Log startup info
     logging.info(f"{me.first_name} with Pyrogram v{__version__} (Layer {layer}) started on {me.username}.")
     logging.info(LOG_STR)
     logging.info(script.LOGO)
-    tz = pytz.timezone('Asia/Kolkata')
+
+    # Send restart notification
+    now = datetime.now(pytz.timezone('Asia/Kolkata'))
     today = date.today()
-    now = datetime.now(tz)
-    time = now.strftime("%H:%M:%S %p")
-    await dreamxbotz.send_message(chat_id=LOG_CHANNEL, text=script.RESTART_TXT.format(temp.B_LINK, today, time))
-    app = web.AppRunner(await web_server())
-    await app.setup()
-    bind_address = "0.0.0.0"
-    await web.TCPSite(app, bind_address, PORT).start()
-    dreamxbotz.loop.create_task(keep_alive())
+    timestamp = now.strftime("%H:%M:%S %p")
+    await dreamxbotz.send_message(LOG_CHANNEL, script.RESTART_TXT.format(temp.B_LINK, today, timestamp))
+
+    # Start background tasks
+    asyncio.create_task(throttled_check_expired())
+    asyncio.create_task(throttled_keep_alive())
+    asyncio.create_task(start_fastapi())
+
+    # Keep alive
     await idle()
-    
-if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
+
+if __name__ == "__main__":
     try:
-        loop.run_until_complete(dreamxbotz_start())
+        asyncio.run(dreamxbotz_start())
     except KeyboardInterrupt:
-        logging.info('Service Stopped Bye 👋')
+        logging.info("🛑 Bot stopped by user")
