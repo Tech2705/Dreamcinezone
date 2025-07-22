@@ -294,33 +294,40 @@ async def save_group_settings(group_id, key, value):
 
 import re
 
+import re
+
 def sanitize_title(raw_title: str) -> str:
     """
-    Removes junk like usernames, tags, resolutions, codecs, etc. to isolate the clean movie title.
+    Cleans up file titles by removing junk like tags, encodes, usernames, etc.
     """
     title = raw_title.strip()
 
-    # Remove Telegram usernames like @channel
+    # Remove Telegram usernames like @something
     title = re.sub(r"@\w+", "", title)
 
-    # Remove contents in [], (), {}
-    title = re.sub(r"[\[\(\{].*?[\]\)\}]", "", title)
+    # Remove leading junk like [TIF], (2023), etc.
+    title = re.sub(r"^[\[\(\{].*?[\]\)\}]", "", title)
 
-    # Remove typical release/encoding tags
-    patterns = [
+    # Replace separators with space
+    title = re.sub(r"[\._\-]", " ", title)
+
+    # Remove tags like 720p, x264, HDRip, etc.
+    tags = [
         r'\b\d{3,4}p\b', r'\bHDRip\b', r'\bBluRay\b', r'\bWEBRip\b', r'\bWEB[- ]DL\b',
-        r'\bDVDRip\b', r'\bHEVC\b', r'\bx264\b', r'\bx265\b', r'\bESub[s]?\b', r'\bDual Audio\b'
+        r'\bDVDRip\b', r'\bHEVC\b', r'\bx264\b', r'\bx265\b', r'\bESub[s]?\b',
+        r'\bDual\s?Audio\b', r'\bAAC\b', r'\bDDP?\b', r'\b10bit\b', r'\bHC\b', r'\bCAM\b'
     ]
-    for p in patterns:
-        title = re.sub(p, '', title, flags=re.IGNORECASE)
+    for tag in tags:
+        title = re.sub(tag, "", title, flags=re.IGNORECASE)
 
-    # Replace common separators with space
-    title = re.sub(r'[\-_\.]', ' ', title)
+    # Remove leftover bracketed junk
+    title = re.sub(r"[\[\(\{].*?[\]\)\}]", "", title)
 
     # Remove extra whitespace
     title = re.sub(r'\s+', ' ', title)
 
     return title.strip().title()
+
 
 
 
