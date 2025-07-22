@@ -295,45 +295,23 @@ async def save_group_settings(group_id, key, value):
 import re
 
 def sanitize_title(raw_title: str) -> str:
-    """
-    Cleans the title string by removing junk, tags, encodes, usernames, and unwanted patterns.
-    """
-    title = raw_title.strip()
+    # Remove Telegram usernames and groups (like @something)
+    title = re.sub(r'@\S+', '', raw_title)
 
-    # Lowercase copy for matching
-    lowered = title.lower()
+    # Remove content in square or round brackets
+    title = re.sub(r'\[.*?\]|\(.*?\)', '', title)
 
-    # Step 1: Remove telegram usernames like @rottenfiles
-    title = re.sub(r"@\w+", "", title)
+    # Remove typical separators and replace dots/underscores with space
+    title = title.replace('.', ' ').replace('_', ' ').replace('-', ' ')
 
-    # Step 2: Remove leading bracketed content [TIF], (2023), etc.
-    title = re.sub(r"^[\[\(\{].*?[\]\)\}]", "", title)
+    # Remove extra non-alphanumeric characters except space
+    title = re.sub(r'[^a-zA-Z0-9 ]', '', title)
 
-    # Step 3: Replace separators with spaces
-    title = re.sub(r"[\._\-]", " ", title)
-
-    # Step 4: Remove common encoding/release tags
-    patterns = [
-        r'\b\d{3,4}p\b', r'\bHDRip\b', r'\bBluRay\b', r'\bWEB[- ]?DL\b',
-        r'\bWEBRip\b', r'\bDVDRip\b', r'\bHEVC\b', r'\bx264\b', r'\bx265\b',
-        r'\bESub[s]?\b', r'\bDual\s?Audio\b', r'\bAAC\b', r'\bDDP?\b',
-        r'\b10bit\b', r'\bHC\b', r'\bCAM\b', r'\bHDCAM\b'
-    ]
-    for pattern in patterns:
-        title = re.sub(pattern, '', title, flags=re.IGNORECASE)
-
-    # Step 5: Remove blacklisted noise words
-    blacklist = ['tif', 'mashobuc', 'rottenfiles', 'cinevood', 'skymovies', 'extramovies']
-    title_words = title.split()
-    title = ' '.join(word for word in title_words if word.lower() not in blacklist)
-
-    # Step 6: Remove any leftover bracketed junk
-    title = re.sub(r"[\[\(\{].*?[\]\)\}]", "", title)
-
-    # Final cleanup: collapse spaces and capitalize
-    title = re.sub(r"\s+", " ", title).strip().title()
+    # Normalize spaces and title-case
+    title = re.sub(r'\s+', ' ', title).strip().title()
 
     return title
+
 
 
 
