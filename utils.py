@@ -293,38 +293,25 @@ async def save_group_settings(group_id, key, value):
     await db.update_settings(group_id, current)
 
 import re
-from typing import Optional
 
-def sanitize_title(raw_title: str) -> Optional[str]:
-    # Step 1: Remove bracketed text like [TIF]
-    title = re.sub(r"\[.*?\]", "", raw_title)
+def sanitize_title(raw_title: str) -> str:
+    # 1. Remove known Telegram/channel prefixes
+    title = re.sub(r"\[.*?\]", "", raw_title)  # Remove [TIF], [Mashobuc], etc.
+    title = re.sub(r"@[\w\d_]+", "", title)    # Remove @SPY_TALKIESS, @rottenfiles
+    title = re.sub(r"[-_]", " ", title)        # Convert - and _ to spaces
+    title = re.sub(r"\s+", " ", title).strip() # Normalize spaces
 
-    # Step 2: Remove @handles and Telegram channel names
-    title = re.sub(r"@\S+", "", title)
-
-    # Step 3: Remove dashes/hyphens and dots as separators
-    title = title.replace("-", " ").replace("_", " ").replace(".", " ")
-
-    # Step 4: Normalize extra spaces
-    title = re.sub(r'\s+', ' ', title).strip()
-
-    # Step 5: Match year (e.g., 2024, 2025)
-    year_match = re.search(r"\b(19|20)\d{2}\b", title)
+    # 2. Extract title and year intelligently
+    year_match = re.search(r"(19|20)\d{2}", title)
     if not year_match:
-        return None  # No year found, skip
+        return title.title()
 
     year = year_match.group()
-    
-    # Step 6: Keep only the part of title before and including the year
-    title_before_year = title.split(year)[0]
-    clean_title = f"{title_before_year} {year}".strip()
+    title_before_year = title.split(year)[0].strip()
 
-    # Step 7: Final clean and capitalize
-    return re.sub(r'\s+', ' ', clean_title).title()
-
-
-
-
+    # 3. Clean final title
+    clean_title = f"{title_before_year} {year}"
+    return re.sub(r"\s+", " ", clean_title).title()
 
 
 def extract_metadata(file_name):
