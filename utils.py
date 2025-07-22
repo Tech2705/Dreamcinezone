@@ -292,11 +292,36 @@ async def save_group_settings(group_id, key, value):
     temp.SETTINGS.update({group_id: current})
     await db.update_settings(group_id, current)
 
-def sanitize_title(raw_title):
-    import re
-    clean = re.sub(r'\[.*?\]', '', raw_title)
-    clean = clean.strip().title()
-    return clean
+import re
+
+def sanitize_title(raw_title: str) -> str:
+    """
+    Removes junk like usernames, tags, resolutions, codecs, etc. to isolate the clean movie title.
+    """
+    title = raw_title.strip()
+
+    # Remove Telegram usernames like @channel
+    title = re.sub(r"@\w+", "", title)
+
+    # Remove contents in [], (), {}
+    title = re.sub(r"[\[\(\{].*?[\]\)\}]", "", title)
+
+    # Remove typical release/encoding tags
+    patterns = [
+        r'\b\d{3,4}p\b', r'\bHDRip\b', r'\bBluRay\b', r'\bWEBRip\b', r'\bWEB[- ]DL\b',
+        r'\bDVDRip\b', r'\bHEVC\b', r'\bx264\b', r'\bx265\b', r'\bESub[s]?\b', r'\bDual Audio\b'
+    ]
+    for p in patterns:
+        title = re.sub(p, '', title, flags=re.IGNORECASE)
+
+    # Replace common separators with space
+    title = re.sub(r'[\-_\.]', ' ', title)
+
+    # Remove extra whitespace
+    title = re.sub(r'\s+', ' ', title)
+
+    return title.strip().title()
+
 
 
 def extract_metadata(file_name):
